@@ -1,4 +1,4 @@
-package mindful_consumption_week5;
+//package mindful_consumption_week5;
 import java.util.List;
 import java.util.ArrayList;
 import java.time.LocalDate;
@@ -32,6 +32,14 @@ public class Pantry {
             }
         }
         return expiringSoon;
+    }
+    public boolean hasIngredient(String ingredient) {
+        for (FoodItem item : items) {
+            if (item.getName().equalsIgnoreCase(ingredient)) {
+                return true;
+            }
+        }
+        return false;
     }
     
     public List<Notifications> generateNotifications() {

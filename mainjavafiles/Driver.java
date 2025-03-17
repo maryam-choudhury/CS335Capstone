@@ -6,83 +6,35 @@ import java.time.format.DateTimeParseException;
 public class Driver {
     private static final Scanner scanner = new Scanner(System.in);
     private static final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd"); // international format
+    private static final List<Recipe> recipes = Recipe.loadHardcodedRecipes(); // Load hardcoded recipes
 
     public static void main(String[] args) {
         List<User> users = CSV.loadUsersFromCSV("users.csv"); // Load users from existing CSV
         CSV.loadNotificationsFromCSV("notifications.csv", users); // Load notifications 
+        
+        // Ensuring Jennie Kim is hard coded to CSV for persistence
+        if (!CSV.userExists("JennieKim", users)) {
+            User testUser = new User("JennieKim", "Jennie Kim", "jennie@email.com", new ArrayList<>(), true);
+            users.add(testUser);
+            CSV.exportUsersToCSV(users, "users.csv");
+        }
 
         while (true) { 
             User currentUser = null; // Reset currentUser for new login
 
             while (currentUser == null) {  
-                System.out.print("Are you a new user? (yes/no): ");
-                String isNewUser = scanner.nextLine().trim().toLowerCase();
+                System.out.print("Enter your username: ");
+                String username = scanner.nextLine().trim();
 
-                if (isNewUser.equals("no")) {
-                    System.out.print("Enter your username: ");
-                    String username = scanner.nextLine().trim();
-
-                    for (User user : users) {
-                        if (user.getUserID().trim().equalsIgnoreCase(username.trim())) { // remove unwanted spaces
-                            currentUser = user;
-                            break;
-                        }
+                for (User user : users) {
+                    if (user.getUserID().trim().equalsIgnoreCase(username.trim())) { 
+                        currentUser = user;
+                        break;
                     }
+                }
 
-                    if (currentUser == null) {
-                        System.out.println("Username not found. Please try again.");
-                    }
-
-                } else if (isNewUser.equals("yes")) {
-                    List<String> existingUsernames = new ArrayList<>();
-                    for (User user : users) {
-                        existingUsernames.add(user.getUserID()); // Store usernames
-                    }
-
-                    String username;
-                    while (true) {
-                        System.out.print("Choose a username: ");
-                        username = scanner.nextLine().trim();
-
-                        if (!existingUsernames.contains(username)) {
-                            break;
-                        } else {
-                            System.out.println("This username is unavailable. Please choose another one.");
-                        }
-                    }
-
-                    System.out.print("Enter your name: ");
-                    String name = scanner.nextLine();
-                    System.out.print("Enter your email: ");
-                    String email = scanner.nextLine();
-                    System.out.print("Enter dietary preferences (comma-separated): ");
-                    List<String> dietaryPreferences = Arrays.asList(scanner.nextLine().split(","));
-
-                    boolean notifications = false;
-                    while (true) {
-                        System.out.print("Enable notifications? (yes/no): ");
-                        String notificationInput = scanner.nextLine().trim().toLowerCase();
-                        if (notificationInput.equals("yes")) {
-                            notifications = true;
-                            break;
-                        } else if (notificationInput.equals("no")) {
-                            break;
-                        } else {
-                            System.out.println("Invalid input. Please enter 'yes' or 'no'.");
-                        }
-                    }
-
-                    // Create new user 
-                    // initialize notifications
-                    User newUser = new User(username, name, email, dietaryPreferences, notifications);
-                    users.add(newUser);
-                    System.out.println("Account created successfully! Your username is: " + newUser.getUserID());
-
-                    // Save new user data
-                    CSV.exportUsersToCSV(users, "users.csv");
-                    System.out.println("Please log in with your new username.");
-                } else {
-                    System.out.println("Invalid input. Please enter 'yes' or 'no'.");
+                if (currentUser == null) {
+                    System.out.println("Username not found. Please try again.");
                 }
             }
 
@@ -93,59 +45,55 @@ public class Driver {
                 System.out.println("1. View Pantry");
                 System.out.println("2. Add Food Item");
                 System.out.println("3. View Notifications");
-                System.out.println("4. Logout");
-
+                System.out.println("4. View My Recipes"); // Updated to list all recipes
+                System.out.println("5. View Suggested Recipes"); // Updated to sort and notify
+                System.out.println("6. Logout");
+                
                 System.out.print("Enter choice: ");
                 int choice = scanner.nextInt();
                 scanner.nextLine();
 
                 switch (choice) {
                     case 1:
-                        System.out.println("\nYour Pantry:");
-                        if (currentUser.getPantry() != null) {
-                            for (FoodItem item : currentUser.getPantry().getItems()) {
-                                System.out.println(item);
-                            }
-                        } else {
-                            System.out.println("(TODO: Implement pantry retrieval)");
-                        }
+                        viewPantry(currentUser);
                         break;
-
                     case 2:
-                        if (currentUser.getPantry() != null) {
-                            addFoodItem(currentUser.getPantry());
-                        } else {
-                            System.out.println("(TODO: Implement addFoodItem)");
-                        }
+                        addFoodItem(currentUser);
                         break;
-
                     case 3:
-                        System.out.println("\nYour Notifications:");
-                        if (!currentUser.getNotifications().isEmpty()) {
-                            for (Notifications notification : currentUser.getNotifications()) {
-                                System.out.println(notification);
-                            }
-                        } else {
-                            System.out.println("You have no notifications.");
-                        }
+                        viewNotifications(currentUser);
                         break;
-
                     case 4:
+                        viewAllRecipes();
+                        break;
+                    case 5:
+                        viewSuggestedRecipes(currentUser);
+                        break;
+                    case 6:
                         System.out.println("Logging out...");
-
-                        // Save notifications before logout
                         CSV.exportNotificationsToCSV(users, "notifications.csv"); 
-                        break; // Exit the menu loop when logging out
+                        break;
                 }
 
-                if (choice == 4) {
-                    break; // Breaks out of the menu loop and restarts login
+                if (choice == 6) {
+                    break;
                 }
             }
         }
     }
 
-    private static void addFoodItem(Pantry pantry) {
+    private static void viewPantry(User user) {
+        System.out.println("\nYour Pantry:");
+        if (!user.getPantry().getItems().isEmpty()) {
+            for (FoodItem item : user.getPantry().getItems()) {
+                System.out.println(item);
+            }
+        } else {
+            System.out.println("Your pantry is empty.");
+        }
+    }
+
+    private static void addFoodItem(User user) {
         System.out.print("Enter food name: ");
         String name = scanner.nextLine();
 
@@ -153,37 +101,70 @@ public class Driver {
         int quantity = scanner.nextInt();
         scanner.nextLine();
 
-        System.out.print("Enter category (Fruit, Vegetable, Pantry Goods, Dairy, Protein, Spices): ");
+        System.out.print("Enter category: ");
         String category = scanner.nextLine();
 
-        LocalDate expirationDate = null;
-        while (expirationDate == null) {
-            System.out.print("Enter expiration date (YYYY-MM-DD): ");
-            String dateInput = scanner.nextLine();
-            try {
-                expirationDate = LocalDate.parse(dateInput, dateFormatter);
-            } catch (DateTimeParseException e) {
-                System.out.println("Invalid date format. Please use YYYY-MM-DD.");
-            }
-        }
+        System.out.print("Enter expiration date (YYYY-MM-DD): ");
+        String dateInput = scanner.nextLine();
+        LocalDate expirationDate = LocalDate.parse(dateInput, dateFormatter);
 
-        int ripeness = -1; 
-        while (ripeness < 0 || ripeness > 5) {  // Add logic for foods that do not get ripe
-            System.out.print("Enter ripeness level (0-5): ");
-            if (scanner.hasNextInt()) {
-                ripeness = scanner.nextInt();
-            } else {
-                scanner.next();
-            }
-        }
-        scanner.nextLine();
-
-        FoodItem item = new FoodItem(name, quantity, expirationDate, category, ripeness);
-        pantry.addFoodItem(item);
+        FoodItem item = new FoodItem(name, quantity, expirationDate, category, 0);
+        user.getPantry().addFoodItem(item);
         System.out.println("Food item added successfully!");
     }
-}
 
+    private static void viewNotifications(User user) {
+        System.out.println("\nYour Notifications:");
+        List<Notifications> notifications = user.getNotifications();
+        if (notifications.isEmpty()) {
+            System.out.println("No notifications available.");
+        } else {
+            for (Notifications notification : notifications) {
+                System.out.println("- " + notification.getMessage());
+            }
+        }
+    }
+
+    private static void viewAllRecipes() {
+        System.out.println("\nAll Available Recipes:");
+        for (Recipe recipe : recipes) {
+            System.out.println("- " + recipe.getName());
+        }
+    }
+
+    private static void viewSuggestedRecipes(User user) {
+        System.out.println("\nSuggested Recipes (sorted by highest ingredient match):");
+        List<RecipeMatch> matches = new ArrayList<>();
+
+        for (Recipe recipe : recipes) {
+            int matchCount = 0;
+            for (String ingredient : recipe.getIngredients()) {
+                if (user.getPantry().hasIngredient(ingredient)) {
+                    matchCount++;
+                }
+            }
+            double matchPercentage = (double) matchCount / recipe.getIngredients().size();
+            if (matchPercentage >= 0.6) { // 60% match threshold
+                matches.add(new RecipeMatch(recipe, matchPercentage));
+                
+                // Generate a notification for high-match recipes
+                String message = "You have most ingredients for " + recipe.getName() + "!";
+                Notifications newNotification = new Notifications(message);
+                if (!user.getNotifications().contains(newNotification)) { // Avoids duplicate notifications
+                    user.addNotification(newNotification);
+                }
+            }
+        }
+        
+        // Sort recipes in descending order based on percentage matching pantry
+        matches.sort((a, b) -> Double.compare(b.matchPercentage, a.matchPercentage));
+        for (RecipeMatch match : matches) {
+            System.out.println("- " + match.recipe.getName() + " (" + (int)(match.matchPercentage * 100) + "% match)");
+        }
+        
+        CSV.exportNotificationsToCSV(Collections.singletonList(user), "notifications.csv");
+    }
+}
 
 
 

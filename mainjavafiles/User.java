@@ -1,4 +1,4 @@
-package mindful_consumption_week5;
+//package mindful_consumption_week5;
 import java.util.ArrayList;
 import java.util.List;
 

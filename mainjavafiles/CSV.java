@@ -1,4 +1,4 @@
-package mindful_consumption_week5;
+//package mindful_consumption_week5;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -26,7 +26,16 @@ public class CSV {
         }
     }
 
-  
+   
+        public static boolean userExists(String username, List<User> users) {
+            for (User user : users) {
+                if (user.getUserID().equalsIgnoreCase(username)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+    
     public static void loadNotificationsFromCSV(String filename, List<User> users) {
         File file = new File(filename);
         if (!file.exists()) {
