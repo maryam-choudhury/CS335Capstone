@@ -6,9 +6,15 @@ import java.time.format.DateTimeParseException;
 public class Driver {
     private static final Scanner scanner = new Scanner(System.in);
     private static final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd"); // international format
-    private static final List<Recipe> recipes = Recipe.loadHardcodedRecipes(); // Load hardcoded recipes
 
     public static void main(String[] args) {
+    	
+    	
+    	List<Recipe> recipes = new ArrayList<>();
+        recipes.addAll(Recipe.loadHardcodedRecipes()); //load all scraped and hardcoded recipes
+        recipes.addAll(Recipe.loadScrapedRecipes());
+        
+        
         List<User> users = CSV.loadUsersFromCSV("users.csv"); // Load users from existing CSV
         CSV.loadNotificationsFromCSV("notifications.csv", users); // Load notifications 
         
@@ -47,7 +53,8 @@ public class Driver {
                 System.out.println("3. View Notifications");
                 System.out.println("4. View My Recipes"); // Updated to list all recipes
                 System.out.println("5. View Suggested Recipes"); // Updated to sort and notify
-                System.out.println("6. Logout");
+                System.out.println("6. Add a Recipe");
+                System.out.println("7. Logout");
                 
                 System.out.print("Enter choice: ");
                 int choice = scanner.nextInt();
@@ -61,13 +68,14 @@ public class Driver {
                         addFoodItem(currentUser);
                         break;
                     case 3:
+                        checkExpiringFoodItems(currentUser); //added this line to fix the notification system
                         viewNotifications(currentUser);
                         break;
                     case 4:
-                        viewAllRecipes();
+                        viewAllRecipes(recipes);
                         break;
                     case 5:
-                        viewSuggestedRecipes(currentUser);
+                        viewSuggestedRecipes(currentUser, recipes);
                         break;
                     case 6:
                         System.out.println("Logging out...");
@@ -113,11 +121,14 @@ public class Driver {
         System.out.println("Food item added successfully!");
     }
 
+    
+    
+    
     private static void viewNotifications(User user) {
         System.out.println("\nYour Notifications:");
         List<Notifications> notifications = user.getNotifications();
         if (notifications.isEmpty()) {
-            System.out.println("No notifications available.");
+            System.out.println("No notifications available.");  
         } else {
             for (Notifications notification : notifications) {
                 System.out.println("- " + notification.getMessage());
@@ -125,14 +136,42 @@ public class Driver {
         }
     }
 
-    private static void viewAllRecipes() {
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    private static void checkExpiringFoodItems(User user) {
+        List<Notifications> newNotifications = user.getPantry().generateNotifications();
+
+        for (Notifications notification : newNotifications) {
+            if (!user.getNotifications().contains(notification)) {
+                user.addNotification(notification);
+            }
+        }
+        CSV.exportNotificationsToCSV(Collections.singletonList(user), "notifications.csv");
+    }
+    
+    
+  
+  
+    
+    private static void viewAllRecipes(List<Recipe> recipes) {
         System.out.println("\nAll Available Recipes:");
         for (Recipe recipe : recipes) {
-            System.out.println("- " + recipe.getName());
+                System.out.println("- " + recipe.getName());
+                //System.out.println("  Ingredients: " + String.join(", ", recipe.getIngredients())); these lines of code print out the instructions and ingredients of the recipes but we don't need to implement this rn
+                //System.out.println("  Instructions: " + recipe.getInstructions() + "\n");
         }
     }
-
-    private static void viewSuggestedRecipes(User user) {
+    
+    
+    
+    private static void viewSuggestedRecipes(User user, List<Recipe> recipes) {
         System.out.println("\nSuggested Recipes (sorted by highest ingredient match):");
         List<RecipeMatch> matches = new ArrayList<>();
 

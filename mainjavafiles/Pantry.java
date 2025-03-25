@@ -33,6 +33,11 @@ public class Pantry {
         }
         return expiringSoon;
     }
+    
+    
+    
+    
+    
     public boolean hasIngredient(String ingredient) {
         for (FoodItem item : items) {
             if (item.getName().equalsIgnoreCase(ingredient)) {
@@ -41,6 +46,8 @@ public class Pantry {
         }
         return false;
     }
+
+    
     
     public List<Notifications> generateNotifications() {
         List<Notifications> notifications = new ArrayList<>();
@@ -55,6 +62,8 @@ public class Pantry {
         }
         return notifications;
     }
+    
+    
     public void updateRipenessLevels() {
         for (FoodItem item : items) {
             item.increaseRipeness();
