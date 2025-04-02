@@ -2,6 +2,17 @@ import java.util.*;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.ArrayList;
+import java.util.List;
+import java.time.LocalDate;
+
+
 
 public class Driver {
     private static final Scanner scanner = new Scanner(System.in);
@@ -24,7 +35,16 @@ public class Driver {
             users.add(testUser);
             CSV.exportUsersToCSV(users, "users.csv");
         }
+        CSV.loadNotificationsFromCSV("notifications.csv", users);
+        CSV.loadPantriesFromCSV("pantry.csv", users);
+        CSV.loadShoppingListsFromCSV("shoppinglist.csv", users); // ✅ NEW
 
+
+        CSV.loadNotificationsFromCSV("notifications.csv", users); // Load notifications
+        CSV.loadPantriesFromCSV("pantry.csv", users); // ✅ Load pantry data for users
+
+
+        
         while (true) { 
             User currentUser = null; // Reset currentUser for new login
 
@@ -53,8 +73,10 @@ public class Driver {
                 System.out.println("3. View Notifications");
                 System.out.println("4. View My Recipes"); // Updated to list all recipes
                 System.out.println("5. View Suggested Recipes"); // Updated to sort and notify
-                System.out.println("6. Add a Recipe");
+                System.out.println("6. Add a Recipe"); 
                 System.out.println("7. Logout");
+                System.out.println("8. View/Add to Shopping List");
+                
                 
                 System.out.print("Enter choice: ");
                 int choice = scanner.nextInt();
@@ -79,8 +101,15 @@ public class Driver {
                         break;
                     case 6:
                         System.out.println("Logging out...");
-                        CSV.exportNotificationsToCSV(users, "notifications.csv"); 
+                        CSV.exportNotificationsToCSV(users, "notifications.csv");
+                        CSV.exportPantriesToCSV(users, "pantry.csv"); // 
+                        CSV.exportNotificationsToCSV(users, "notifications.csv");
+                        CSV.exportPantriesToCSV(users, "pantry.csv");
+                        CSV.exportShoppingListsToCSV(users, "shoppinglist.csv"); //
+                    case 8:
+                        manageShoppingList(currentUser);
                         break;
+
                 }
 
                 if (choice == 6) {
@@ -89,6 +118,22 @@ public class Driver {
             }
         }
     }
+    
+    public static void exportPantriesToCSV(List<User> users, String filename) {
+        try (PrintWriter writer = new PrintWriter(new FileWriter(filename))) {
+            writer.println("Username,Name,Quantity,ExpirationDate,Category,Ripeness"); // header
+            for (User user : users) {
+                for (FoodItem item : user.getPantry().getItems()) {
+                    writer.println(user.getUserID() + "," + item.toString());
+                }
+            }
+            System.out.println("Pantries successfully exported to " + filename);
+        } catch (IOException e) {
+            System.err.println("Error writing pantry CSV: " + e.getMessage());
+        }
+    }
+
+    
 
     private static void viewPantry(User user) {
         System.out.println("\nYour Pantry:");
@@ -139,7 +184,7 @@ public class Driver {
     
     
    
-    
+   
     
     
     private static void checkExpiringFoodItems(User user) {
@@ -165,7 +210,39 @@ public class Driver {
                 //System.out.println("  Instructions: " + recipe.getInstructions() + "\n");
         }
     }
-    
+    private static void manageShoppingList(User user) {
+        while (true) {
+            System.out.println("\nYour Shopping List:");
+            List<String> list = user.getShoppingList();
+            if (list.isEmpty()) {
+                System.out.println("Your shopping list is empty.");
+            } else {
+                for (String item : list) {
+                    System.out.println("- " + item);
+                }
+            }
+
+            System.out.println("\n1. Add Item");
+            System.out.println("2. Remove Item");
+            System.out.println("3. Back to Menu");
+            System.out.print("Enter choice: ");
+            int choice = scanner.nextInt();
+            scanner.nextLine(); // clear newline
+
+            if (choice == 1) {
+                System.out.print("Enter item to add: ");
+                String item = scanner.nextLine();
+                user.addToShoppingList(item);
+            } else if (choice == 2) {
+                System.out.print("Enter item to remove: ");
+                String item = scanner.nextLine();
+                user.removeFromShoppingList(item);
+            } else if (choice == 3) {
+                break;
+            }
+        }
+    }
+
     
     
     private static void viewSuggestedRecipes(User user, List<Recipe> recipes) {

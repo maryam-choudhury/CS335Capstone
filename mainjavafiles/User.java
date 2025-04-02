@@ -10,6 +10,7 @@ public class User {
     private Pantry pantry;
     private List<Notifications> notifications; // Stores user notifications
     private boolean notificationsEnabled; // Store notifications preference separately
+    private List<String> shoppingList = new ArrayList<>();
 
 
     public User(String username, String name, String email, List<String> dietaryPreferences, boolean notificationsEnabled) {
@@ -74,5 +75,19 @@ public class User {
     public String getName() {
         return name;
     }
+    public List<String> getShoppingList() {
+        return shoppingList;
+    }
+
+    public void addToShoppingList(String item) {
+        if (!shoppingList.contains(item)) {
+            shoppingList.add(item);
+        }
+    }
+
+    public void removeFromShoppingList(String item) {
+        shoppingList.remove(item);
+    }
+
 }
 

@@ -8,6 +8,8 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
+import java.time.LocalDate;
+
 
 public class CSV {
 
@@ -86,6 +88,75 @@ public class CSV {
             System.err.println("Error writing to CSV: " + e.getMessage());
         }
     }
+    
+    public static void exportPantriesToCSV(List<User> users, String filename) {
+        try (PrintWriter writer = new PrintWriter(new FileWriter(filename))) {
+            writer.println("Username,Name,Quantity,ExpirationDate,Category,Ripeness"); // header
+            for (User user : users) {
+                for (FoodItem item : user.getPantry().getItems()) {
+                    writer.println(user.getUserID() + "," + item.toString());
+                }
+            }
+            System.out.println("Pantries successfully exported to " + filename);
+        } catch (IOException e) {
+            System.err.println("Error writing pantry CSV: " + e.getMessage());
+        }
+    }
+    public static void exportShoppingListsToCSV(List<User> users, String filename) {
+        try (PrintWriter writer = new PrintWriter(new FileWriter(filename))) {
+            writer.println("Username,Item"); // Header
+            for (User user : users) {
+                for (String item : user.getShoppingList()) {
+                    writer.println(user.getUserID() + "," + item);
+                }
+            }
+            System.out.println("Shopping lists successfully exported to " + filename);
+        } catch (IOException e) {
+            System.err.println("Error writing shopping list CSV: " + e.getMessage());
+        }
+    }
+
+
+    
+    public static void loadPantriesFromCSV(String filename, List<User> users) {
+        File file = new File(filename);
+        if (!file.exists()) return;
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(filename))) {
+            String line;
+            boolean firstLine = true;
+
+            while ((line = reader.readLine()) != null) {
+                if (firstLine) {
+                    firstLine = false;
+                    continue;
+                }
+
+                String[] parts = line.split(",", 6);
+                if (parts.length < 6) continue;
+
+                String username = parts[0].trim();
+                String name = parts[1].trim();
+                int quantity = Integer.parseInt(parts[2].trim());
+                LocalDate expirationDate = LocalDate.parse(parts[3].trim());
+                String category = parts[4].trim();
+                int ripeness = Integer.parseInt(parts[5].trim());
+
+                for (User user : users) {
+                    if (user.getUserID().equalsIgnoreCase(username)) {
+                        FoodItem item = new FoodItem(name, quantity, expirationDate, category, ripeness);
+                        user.getPantry().addFoodItem(item);
+                        break;
+                    }
+                }
+            }
+
+            System.out.println("Pantries successfully loaded from " + filename);
+        } catch (IOException e) {
+            System.err.println("Error reading pantry CSV: " + e.getMessage());
+        }
+    }
+
 
     public static List<User> loadUsersFromCSV(String filename) {
         List<User> users = new ArrayList<>();
@@ -120,6 +191,41 @@ public class CSV {
 
         return users;
     }
+    
+    public static void loadShoppingListsFromCSV(String filename, List<User> users) {
+        File file = new File(filename);
+        if (!file.exists()) return;
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(filename))) {
+            String line;
+            boolean firstLine = true;
+
+            while ((line = reader.readLine()) != null) {
+                if (firstLine) {
+                    firstLine = false;
+                    continue;
+                }
+
+                String[] parts = line.split(",", 2);
+                if (parts.length < 2) continue;
+
+                String username = parts[0].trim();
+                String item = parts[1].trim();
+
+                for (User user : users) {
+                    if (user.getUserID().equalsIgnoreCase(username)) {
+                        user.addToShoppingList(item);
+                        break;
+                    }
+                }
+            }
+
+            System.out.println("Shopping lists successfully loaded from " + filename);
+        } catch (IOException e) {
+            System.err.println("Error reading shopping list CSV: " + e.getMessage());
+        }
+    }
+
 
 }
 
