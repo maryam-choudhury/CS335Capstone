@@ -1,3 +1,9 @@
+
+// Scraping now handled in recipies.java, now this file is legacy 
+
+// We can use it for manual tests!
+
+
 import java.io.IOException;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -38,3 +44,4 @@ public class Scrape {
     }
 
 }
+

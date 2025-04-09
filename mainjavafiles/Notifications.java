@@ -1,40 +1,30 @@
-//package mindful_consumption_week5;
-
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-import java.util.Collections;
-
-// class represents a single notif about food status
 public class Notifications {
-	private String message;
-	private LocalDate dateGenerated;
-	
-	// notification w/ message constructor
-	public Notifications(String message) {
-		this.message = message;
-		this.dateGenerated = LocalDate.now();
-	}
-	
-	// Constructor to load notifications from CSV (diff than one above!)
-    public Notifications(String message, String date) {
+    private String message;
+
+    public Notifications(String message) {
         this.message = message;
-        this.dateGenerated = LocalDate.parse(date, DateTimeFormatter.ISO_LOCAL_DATE); 
     }
-	
-	// getter for message
+
     public String getMessage() {
         return message;
     }
 
-    public LocalDate getDateGenerated() {
-        return dateGenerated;
+    // Problem: Just returning dates as notifications 
+    // Solution: Override equals to prevent duplicate notifications being added
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (!(obj instanceof Notifications)) return false;
+        Notifications other = (Notifications) obj;
+        return message.equals(other.message);
     }
 
     @Override
-	// stringify
-	public String toString() {
-		return dateGenerated + ": " + message;
-	}
-   
-
+    public int hashCode() {
+        return message.hashCode();
+    }
+    @Override
+    public String toString() {
+        return message;
+    }
 }
