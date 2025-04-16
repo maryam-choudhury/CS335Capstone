@@ -231,11 +231,52 @@ public class Driver {
 
     // View recipe suggestions based on user's pantry
     private static void viewSuggestedRecipes(User user, List<Recipe> recipes) {
+        // Show the user's current match threshold
+        System.out.println("\nYour current minimum ingredient match percentage is: " + user.getMatchThreshold() + "%");
+
+        // Ask if they want to change it
+        System.out.print("Would you like to change your match percentage for this session? (yes/no): ");
+        String response = scanner.nextLine().trim().toLowerCase();
+
+        int threshold = user.getMatchThreshold(); // default to stored value
+
+        if (response.equals("yes")) {
+            System.out.println("\nChoose your new minimum ingredient match percentage:");
+            System.out.println("1. 10%");
+            System.out.println("2. 30%");
+            System.out.println("3. 50%");
+            System.out.println("4. 60%");
+            System.out.println("5. 80%");
+            System.out.println("6. 100%");
+            System.out.print("Enter the number corresponding to your choice: ");
+
+            int matchChoice = scanner.nextInt();
+            scanner.nextLine(); // Clear newline
+
+            switch (matchChoice) {
+                case 1: threshold = 10; break;
+                case 2: threshold = 30; break;
+                case 3: threshold = 50; break;
+                case 4: threshold = 60; break;
+                case 5: threshold = 80; break;
+                case 6: threshold = 100; break;
+                default:
+                    System.out.println("Invalid choice. Keeping previous value: " + threshold + "%");
+            }
+
+            // Persist updated threshold to user object
+            user.setMatchThreshold(threshold);
+        }
+
+        double thresholdDecimal = threshold / 100.0;
+
+        // Match logic based on pantry
         System.out.println("\nSuggested Recipes (sorted by highest ingredient match):");
         List<RecipeMatch> matches = new ArrayList<>();
 
         for (Recipe recipe : recipes) {
             int matchCount = 0;
+
             for (String ingredient : recipe.getIngredients()) {
                 if (user.getPantry().hasIngredient(ingredient)) {
                     matchCount++;
@@ -244,11 +285,10 @@ public class Driver {
 
             double matchPercentage = (double) matchCount / recipe.getIngredients().size();
 
-            if (matchPercentage >= 0.6) { // Show recipes with 60%+ match
+            if (matchPercentage >= thresholdDecimal) {
                 matches.add(new RecipeMatch(recipe, matchPercentage));
 
-                // Notification about recipe match
-                String message = "You have most ingredients for " + recipe.getName() + "!";
+                String message = "You have " + (int)(matchPercentage * 100) + "% of ingredients for " + recipe.getName() + "!";
                 Notifications newNotification = new Notifications(message);
                 if (!user.getNotifications().contains(newNotification)) {
                     user.addNotification(newNotification);
@@ -264,6 +304,7 @@ public class Driver {
 
         CSV.exportNotificationsToCSV(Collections.singletonList(user), "notifications.csv");
     }
+
 
     // View or modify user's shopping list
     private static void manageShoppingList(User user) {

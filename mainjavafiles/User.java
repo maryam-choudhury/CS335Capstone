@@ -10,8 +10,10 @@ public class User {
     private Pantry pantry;
     private List<Notifications> notifications;
     private List<String> shoppingList;
+    private int matchThreshold = 60; // default to 60% match
 
-    public User(String userID, String name, String email, List<String> dietaryPreferences, boolean notificationsEnabled) {
+
+    public User(String userID, String name, String email, List<String> dietaryPreferences, boolean notificationsEnabled, int matchThreshold){
         this.userID = userID;
         this.name = name;
         this.email = email;
@@ -20,7 +22,13 @@ public class User {
         this.pantry = new Pantry(); //  initialize empty pantry
         this.notifications = new ArrayList<>(); // initialize empty notifications
         this.shoppingList = new ArrayList<>(); // initialize empty shopping list
+        this.matchThreshold = matchThreshold;
     }
+    
+    public User(String userID, String name, String email, List<String> dietaryPreferences, boolean notificationsEnabled) {
+        this(userID, name, email, dietaryPreferences, notificationsEnabled, 60); // default to 60%
+    }
+
 
     // Accessor methods
     public String getUserID() {
@@ -66,6 +74,15 @@ public class User {
     public void removeFromShoppingList(String item) {
         this.shoppingList.remove(item);
     }
+    
+    public int getMatchThreshold() {
+        return matchThreshold;
+    }
+
+    public void setMatchThreshold(int matchThreshold) {
+        this.matchThreshold = matchThreshold;
+    }
+
 }
 
 

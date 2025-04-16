@@ -16,8 +16,10 @@ public class CSV {
                 String email = parts[2].trim();
                 List<String> dietaryPreferences = List.of(parts[3].trim().split(";"));
                 boolean notificationsEnabled = Boolean.parseBoolean(parts[4].trim());
+                int matchThreshold = parts.length >= 6 ? Integer.parseInt(parts[5].trim()) : 60;
 
-                users.add(new User(userID, name, email, new ArrayList<>(dietaryPreferences), notificationsEnabled));
+
+                users.add(new User(userID, name, email, new ArrayList<>(dietaryPreferences), notificationsEnabled, matchThreshold));
             }
             System.out.println("Users successfully loaded from " + filename);
         } catch (IOException e) {
@@ -29,10 +31,11 @@ public class CSV {
     // Save users (including dietary prefs) to CSV
     public static void exportUsersToCSV(List<User> users, String filename) {
         try (PrintWriter writer = new PrintWriter(new FileWriter(filename))) {
-            writer.println("Username,Name,Email,DietaryPreferences,NotificationsEnabled");
+        	writer.println("Username,Name,Email,DietaryPreferences,NotificationsEnabled,MatchThreshold");
             for (User user : users) {
-                writer.println(user.getUserID() + "," + user.getName() + "," + user.getEmail() + "," +
-                               String.join(";", user.getDietaryPreferences()) + "," + user.isNotificationsEnabled());
+            	writer.println(user.getUserID() + "," + user.getName() + "," + user.getEmail() + "," +
+                        String.join(";", user.getDietaryPreferences()) + "," + user.isNotificationsEnabled()
+                        + "," + user.getMatchThreshold());
             }
         } catch (IOException e) {
             System.err.println("Error writing to " + filename + ": " + e.getMessage());

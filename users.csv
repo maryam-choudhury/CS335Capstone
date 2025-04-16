@@ -1,4 +1,4 @@
-Username,Name,Email,DietaryPreferences,NotificationsEnabled
-mvryc,Maryam,mvrvvvvv@hotmail.com,pescatarian,true
-jena,jena lee,ljjrvlv@gmail.com,vegitarian,true
-JennieKim,Jennie Kim,jennie@email.com,vegetarian,true
+Username,Name,Email,DietaryPreferences,NotificationsEnabled,MatchThreshold
+mvryc,Maryam,mvrvvvvv@hotmail.com,pescatarian,true,60
+jena,jena lee,ljjrvlv@gmail.com,vegitarian,true,60
+JennieKim,Jennie Kim,jennie@email.com,vegetarian,true,30
