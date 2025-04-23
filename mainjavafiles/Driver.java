@@ -1,7 +1,15 @@
 // Original imports preserved
 import java.util.*;
+import javax.swing.JOptionPane;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+
+import javax.swing.*;
+
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
 
 public class Driver {
     private static final Scanner scanner = new Scanner(System.in);
@@ -51,19 +59,47 @@ public class Driver {
                 System.out.println("New user created and logged in: " + fullName);
             } else {
                 while (currentUser == null) {
-                    System.out.print("Enter your username: ");
-                    String username = scanner.nextLine().trim();
+                	System.out.print("Enter your username: ");
+                	String username = scanner.nextLine().trim();
 
-                    for (User user : users) {
-                        if (user.getUserID().trim().equalsIgnoreCase(username.trim())) {
-                            currentUser = user;
-                            break;
-                        }
-                    }
+                	boolean userFound = false;
+                	for (User user : users) {
+                	    if (user.getUserID().trim().equalsIgnoreCase(username.trim())) {
+                	        currentUser = user;
+                	        userFound = true;
+                	        break;
+                	    }
+                	}
 
-                    if (currentUser == null) {
-                        System.out.println("Username not found. Please try again.");
-                    }
+                	if (!userFound) {
+                	    System.out.println("New user detected. Let's create your profile.");
+
+                	    System.out.print("Enter your full name: ");
+                	    String name = scanner.nextLine();
+
+                	    System.out.print("Enter your email: ");
+                	    String email = scanner.nextLine();
+
+                	    List<String> dietaryPreferences = new ArrayList<>(); // optional future use
+                	    boolean notificationsEnabled = true;
+
+                	    currentUser = new User(username, name, email, dietaryPreferences, notificationsEnabled);
+
+                	    // Add starter pantry items
+                	    addStarterPantryItems(currentUser.getPantry());
+
+                	    users.add(currentUser);
+
+                	    // Save new user to CSVs
+                	    CSV.exportUsersToCSV(users, "users.csv");
+                	    CSV.exportPantriesToCSV(users, "pantry.csv");
+
+                	    // GUI popup
+                	    javax.swing.JOptionPane.showMessageDialog(null,
+                	        "Welcome to the Pantry App, " + name + "!\nWe've added starter spices and oils to your pantry.");
+                	}
+
+
                 }
             }
 
@@ -176,24 +212,59 @@ public class Driver {
 
     // Add new food item to  pantry
     private static void addFoodItem(User user) {
-        System.out.print("Enter food name: ");
-        String name = scanner.nextLine();
+    	String name = JOptionPane.showInputDialog(null, "Enter the name of your food:");
 
-        System.out.print("Enter quantity: ");
-        int quantity = scanner.nextInt();
-        scanner.nextLine();
+        int quantity = 0;
+        boolean validQuantity = false;
+        while (!validQuantity) {
+            String quantityStr = JOptionPane.showInputDialog(null, "Enter the quantity:");
+            if (quantityStr == null) return; // cancel
+            try {
+                quantity = Integer.parseInt(quantityStr);
+                validQuantity = true;
+            } catch (NumberFormatException e) {
+                JOptionPane.showMessageDialog(null, "Please enter a valid integer for quantity.");
+            }
+        }
 
-        System.out.print("Enter category: ");
-        String category = scanner.nextLine();
+        //Category dropdown
+        String categoryString = "Pantry Goods, Vegetables, Fruits, Protein, Spices, Dairy Products";
+        String[] categoryArray = categoryString.split(",");
+        String category = (String) JOptionPane.showInputDialog(
+            null,
+            "Select a category:",
+            "Category",
+            JOptionPane.QUESTION_MESSAGE,
+            null,
+            categoryArray,
+            categoryArray[0]
+        );
 
-        System.out.print("Enter expiration date (YYYY-MM-DD): ");
-        String dateInput = scanner.nextLine();
-        LocalDate expirationDate = LocalDate.parse(dateInput, dateFormatter);
+        if (category == null) return; // user cancelled
+        
+
+  
+        String dateInput = JOptionPane.showInputDialog(null, "Enter expiration date (YYYY-MM-DD):");
+        if (dateInput == null) return;
+
+        LocalDate expirationDate;
+        try {
+            expirationDate = LocalDate.parse(dateInput, DateTimeFormatter.ISO_LOCAL_DATE);
+        } catch (DateTimeParseException e) {
+            JOptionPane.showMessageDialog(null, "Invalid date format. Please use YYYY-MM-DD.");
+            return;
+        }
 
         FoodItem item = new FoodItem(name, quantity, expirationDate, category, 0);
         user.getPantry().addFoodItem(item);
-        System.out.println("Food item added successfully!");
+
+        JOptionPane.showMessageDialog(null, "Food item added successfully!");
     }
+    
+ 
+    
+    
+    
 
     // View user notifications
     private static void viewNotifications(User user) {
@@ -339,5 +410,16 @@ public class Driver {
             }
         }
     }
+    
+    private static void addStarterPantryItems(Pantry pantry) {
+        LocalDate futureDate = LocalDate.now().plusMonths(6); // expiration far in future
+        pantry.addFoodItem(new FoodItem("Salt", 1, futureDate, "Spice", 0));
+        pantry.addFoodItem(new FoodItem("Pepper", 1, futureDate, "Spice", 0));
+        pantry.addFoodItem(new FoodItem("Olive Oil", 1, futureDate, "Oil", 0));
+        pantry.addFoodItem(new FoodItem("Vegetable Oil", 1, futureDate, "Oil", 0));
+        pantry.addFoodItem(new FoodItem("Cumin", 1, futureDate, "Spice", 0));
+        pantry.addFoodItem(new FoodItem("Paprika", 1, futureDate, "Spice", 0));
+    }
+
 }
 
