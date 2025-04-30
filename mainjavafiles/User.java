@@ -1,5 +1,7 @@
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class User {
     private String userID;
@@ -11,6 +13,9 @@ public class User {
     private List<Notifications> notifications;
     private List<String> shoppingList;
     private int matchThreshold = 60; // default to 60% match
+    private List<String> allergies = new ArrayList<>();
+    private Map<String, List<String>> substitutions = new HashMap<>();
+
 
 
     public User(String userID, String name, String email, List<String> dietaryPreferences, boolean notificationsEnabled, int matchThreshold){
@@ -82,6 +87,23 @@ public class User {
     public void setMatchThreshold(int matchThreshold) {
         this.matchThreshold = matchThreshold;
     }
+    
+    public List<String> getAllergies() {
+        return allergies;
+    }
+
+    public void setAllergies(List<String> allergies) {
+        this.allergies = allergies;
+    }
+
+    public Map<String, List<String>> getSubstitutions() {
+        return substitutions;
+    }
+
+    public void setSubstitutions(Map<String, List<String>> substitutions) {
+        this.substitutions = substitutions;
+    }
+
 
 }
 

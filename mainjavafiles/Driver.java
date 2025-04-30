@@ -151,8 +151,10 @@ public class Driver {
                 System.out.println("4. View My Recipes");
                 System.out.println("5. View Suggested Recipes");
                 System.out.println("6. Add a Recipe");
-                System.out.println("7. Logout");
+                System.out.println("7. Logout");  // Will need to be updated to show up at the end
                 System.out.println("8. View/Add to Shopping List");
+                System.out.println("9. Settings");
+
 
                 System.out.print("Enter choice: ");
                 int choice = scanner.nextInt();
@@ -170,7 +172,7 @@ public class Driver {
                         viewNotifications(currentUser);
                         break;
                     case 4:
-                        viewAllRecipes(recipes);
+                        viewAllRecipes(recipes, currentUser);
                         break;
                     case 5:
                         viewSuggestedRecipes(currentUser, recipes);
@@ -192,12 +194,18 @@ public class Driver {
                     case 8:
                         manageShoppingList(currentUser);
                         break;
+                    case 9:
+                        showSettingsMenu(currentUser, users);
+                        break;
+
                     default:
                         System.out.println("Invalid choice.");
                 }
             }
         }
     }
+    
+    
     //  View user's pantry
     private static void viewPantry(User user) {
         System.out.println("\nYour Pantry:");
@@ -261,9 +269,6 @@ public class Driver {
         JOptionPane.showMessageDialog(null, "Food item added successfully!");
     }
     
- 
-    
-    
     
 
     // View user notifications
@@ -292,89 +297,136 @@ public class Driver {
         CSV.exportNotificationsToCSV(Collections.singletonList(user), "notifications.csv");
     }
 
-    // View all available recipes (regardless of content in user's pantry)
-    private static void viewAllRecipes(List<Recipe> recipes) {
-        System.out.println("\nAll Available Recipes:");
-        for (Recipe recipe : recipes) {
-            System.out.println("- " + recipe.getName());
-        }
-    }
+ // View all available recipes (regardless of content in user's pantry)
+ // Prompts the user to view one.
+ // And will ask the user if they want to see recipes that contain their allergens.
+ // If no ->recipes that contain any of their allergens will be filtered out (fuzzy match)
+ private static void viewAllRecipes(List<Recipe> recipes, User user) {
+     System.out.print("Do you want to see recipes that contain your allergens? (yes/no): ");
+     String allowAllergens = scanner.nextLine().trim().toLowerCase();
+     boolean showAllergenRecipes = allowAllergens.equals("yes");
 
-    // View recipe suggestions based on user's pantry
-    private static void viewSuggestedRecipes(User user, List<Recipe> recipes) {
-        // Show the user's current match threshold
-        System.out.println("\nYour current minimum ingredient match percentage is: " + user.getMatchThreshold() + "%");
+     Set<String> expandedAllergens = expandAllergens(user.getAllergies());
 
-        // Ask if they want to change it
-        System.out.print("Would you like to change your match percentage for this session? (yes/no): ");
-        String response = scanner.nextLine().trim().toLowerCase();
+     System.out.println("\nAll Available Recipes:");
+     for (Recipe recipe : recipes) {
+         boolean containsAllergen = false;
+         for (String ingredient : recipe.getIngredients()) {
+             if (fuzzyMatch(ingredient, expandedAllergens)) {
+                 containsAllergen = true;
+                 break;
+             }
+         }
+         if (!showAllergenRecipes && containsAllergen) continue;
+         System.out.println("- " + recipe.getName());
+     }
 
-        int threshold = user.getMatchThreshold(); // default to stored value
+     System.out.print("\nEnter the name of a recipe to view, or type 'back': ");
+     String selection = scanner.nextLine().trim();
 
-        if (response.equals("yes")) {
-            System.out.println("\nChoose your new minimum ingredient match percentage:");
-            System.out.println("1. 10%");
-            System.out.println("2. 30%");
-            System.out.println("3. 50%");
-            System.out.println("4. 60%");
-            System.out.println("5. 80%");
-            System.out.println("6. 100%");
-            System.out.print("Enter the number corresponding to your choice: ");
+     for (Recipe recipe : recipes) {
+         if (recipe.getName().equalsIgnoreCase(selection)) {
+             viewRecipeDetails(recipe, user);
+             return;
+         }
+     }
 
-            int matchChoice = scanner.nextInt();
-            scanner.nextLine(); // Clear newline
+     if (!selection.equalsIgnoreCase("back")) {
+         System.out.println("Recipe not found.");
+     }
+ }
 
-            switch (matchChoice) {
-                case 1: threshold = 10; break;
-                case 2: threshold = 30; break;
-                case 3: threshold = 50; break;
-                case 4: threshold = 60; break;
-                case 5: threshold = 80; break;
-                case 6: threshold = 100; break;
-                default:
-                    System.out.println("Invalid choice. Keeping previous value: " + threshold + "%");
-            }
 
-            // Persist updated threshold to user object
-            user.setMatchThreshold(threshold);
-        }
 
-        double thresholdDecimal = threshold / 100.0;
+    // View recipe suggestions based on user's pantry and ingredient match threshold
+// now asks the user if they want to see recipes that contain allergens
 
-        // Match logic based on pantry
-        System.out.println("\nSuggested Recipes (sorted by highest ingredient match):");
-        List<RecipeMatch> matches = new ArrayList<>();
+private static void viewSuggestedRecipes(User user, List<Recipe> recipes) {
+  System.out.println("\nYour current minimum ingredient match percentage is: " + user.getMatchThreshold() + "%");
+  System.out.print("Would you like to change your match percentage for this session? (yes/no): ");
+  String response = scanner.nextLine().trim().toLowerCase();
 
-        for (Recipe recipe : recipes) {
-            int matchCount = 0;
+  int threshold = user.getMatchThreshold();
+  if (response.equals("yes")) {
+      System.out.println("Choose your new minimum ingredient match percentage:");
+      System.out.println("1. 10%  2. 30%  3. 50%  4. 60%  5. 80%  6. 100%");
+      int choice = scanner.nextInt();
+      scanner.nextLine(); // clear newline
+      switch (choice) {
+          case 1: threshold = 10; break;
+          case 2: threshold = 30; break;
+          case 3: threshold = 50; break;
+          case 4: threshold = 60; break;
+          case 5: threshold = 80; break;
+          case 6: threshold = 100; break;
+          default: System.out.println("Invalid choice. Using saved value.");
+      }
+      user.setMatchThreshold(threshold);
+  }
 
-            for (String ingredient : recipe.getIngredients()) {
-                if (user.getPantry().hasIngredient(ingredient)) {
-                    matchCount++;
-                }
-            }
+  System.out.print("Do you want to see recipes that contain your allergens? (yes/no): ");
+  String allowAllergens = scanner.nextLine().trim().toLowerCase();
+  boolean showAllergenRecipes = allowAllergens.equals("yes");
+  Set<String> expandedAllergens = expandAllergens(user.getAllergies());
 
-            double matchPercentage = (double) matchCount / recipe.getIngredients().size();
+  double thresholdDecimal = threshold / 100.0;
+  List<RecipeMatch> matches = new ArrayList<>();
 
-            if (matchPercentage >= thresholdDecimal) {
-                matches.add(new RecipeMatch(recipe, matchPercentage));
+  for (Recipe recipe : recipes) {
+      int matchCount = 0;
+      for (String ingredient : recipe.getIngredients()) {
+          if (user.getPantry().hasIngredient(ingredient)) {
+              matchCount++;
+          }
+      }
 
-                String message = "You have " + (int)(matchPercentage * 100) + "% of ingredients for " + recipe.getName() + "!";
-                Notifications newNotification = new Notifications(message);
-                if (!user.getNotifications().contains(newNotification)) {
-                    user.addNotification(newNotification);
-                }
-            }
-        }
+      double matchPercent = (double) matchCount / recipe.getIngredients().size();
+      if (matchPercent >= thresholdDecimal) {
+          boolean containsAllergen = false;
+          for (String ing : recipe.getIngredients()) {
+              if (fuzzyMatch(ing, expandedAllergens)) {
+                  containsAllergen = true;
+                  break;
+              }
+          }
+          if (!showAllergenRecipes && containsAllergen) continue;
 
-        matches.sort((a, b) -> Double.compare(b.matchPercentage, a.matchPercentage));
+          matches.add(new RecipeMatch(recipe, matchPercent));
+          String note = "You have " + (int)(matchPercent * 100) + "% of ingredients for " + recipe.getName() + "!";
+          if (!user.getNotifications().contains(new Notifications(note))) {
+              user.addNotification(new Notifications(note));
+          }
+      }
+  }
 
-        for (RecipeMatch match : matches) {
-            System.out.println("- " + match.recipe.getName() + " (" + (int)(match.matchPercentage * 100) + "% match)");
-        }
+  matches.sort((a, b) -> Double.compare(b.matchPercentage, a.matchPercentage));
 
-        CSV.exportNotificationsToCSV(Collections.singletonList(user), "notifications.csv");
-    }
+  if (matches.isEmpty()) {
+      System.out.println("No recipes meet your match threshold.");
+      return;
+  }
+
+  System.out.println("\nSuggested Recipes:");
+  for (RecipeMatch match : matches) {
+      System.out.println("- " + match.recipe.getName() + " (" + (int)(match.matchPercentage * 100) + "% match)");
+  }
+
+  System.out.print("\nEnter the name of a recipe to view, or 'back': ");
+  String selection = scanner.nextLine().trim();
+
+  for (RecipeMatch match : matches) {
+      if (match.recipe.getName().equalsIgnoreCase(selection)) {
+          viewRecipeDetails(match.recipe, user);
+          return;
+      }
+  }
+
+  if (!selection.equalsIgnoreCase("back")) {
+      System.out.println("Recipe not found.");
+  }
+
+  CSV.exportNotificationsToCSV(Collections.singletonList(user), "notifications.csv");
+}
 
 
     // View or modify user's shopping list
@@ -420,6 +472,260 @@ public class Driver {
         pantry.addFoodItem(new FoodItem("Cumin", 1, futureDate, "Spice", 0));
         pantry.addFoodItem(new FoodItem("Paprika", 1, futureDate, "Spice", 0));
     }
+    
+    private static void showSettingsMenu(User user, List<User> users) {
+        while (true) {
+            System.out.println("\n--- Settings ---");
+            System.out.println("1. Dietary Preferences");
+            System.out.println("2. Allergies");
+            System.out.println("3. Common Substitutions");
+            System.out.println("4. Back");
+            System.out.print("Choose an option: ");
+            int choice = scanner.nextInt();
+            scanner.nextLine();
+
+            switch (choice) {
+                case 1:
+                    updateDietaryPreferences(user, users);
+                    break;
+                case 2:
+                    updateAllergies(user, users);
+                    break;
+                case 3:
+                    updateSubstitutions(user, users);
+                    break;
+                case 4:
+                    return;
+                default:
+                    System.out.println("Invalid choice.");
+            }
+        }
+    }
+    
+    private static void updateAllergies(User user, List<User> users) {
+        while (true) {
+            System.out.println("\n--- Allergy Settings ---");
+            System.out.println("1. View All Allergies");
+            System.out.println("2. Add Allergy");
+            System.out.println("3. Remove Allergy");
+            System.out.println("4. Clear All Allergies");
+            System.out.println("5. Back");
+            System.out.print("Enter your choice: ");
+
+            int choice = scanner.nextInt();
+            scanner.nextLine();
+
+            switch (choice) {
+                case 1:
+                    System.out.println("Allergies: " + user.getAllergies());
+                    break;
+                case 2:
+                    List<String> common = List.of("Peanuts", "Tree Nuts", "Dairy", "Eggs", "Shellfish", "Soy", "Wheat");
+                    for (int i = 0; i < common.size(); i++) {
+                        System.out.println((i + 1) + ". " + common.get(i));
+                    }
+                    System.out.println((common.size() + 1) + ". Other");
+                    System.out.print("Enter comma-separated choices: ");
+                    String[] choices = scanner.nextLine().split(",");
+                    List<String> updated = new ArrayList<>(user.getAllergies());
+                    for (String c : choices) {
+                        int idx = Integer.parseInt(c.trim()) - 1;
+                        if (idx >= 0 && idx < common.size()) {
+                            updated.add(common.get(idx));
+                        } else if (idx == common.size()) {
+                            System.out.print("Enter custom allergen: ");
+                            updated.add(scanner.nextLine().trim());
+                        }
+                    }
+                    user.setAllergies(updated);
+                    CSV.exportUsersToCSV(users, "users.csv");
+                    break;
+                case 3:
+                    System.out.println("Current allergies: " + user.getAllergies());
+                    System.out.print("Enter allergy to remove: ");
+                    String toRemove = scanner.nextLine().trim();
+                    user.getAllergies().removeIf(a -> a.equalsIgnoreCase(toRemove));
+                    CSV.exportUsersToCSV(users, "users.csv");
+                    break;
+                case 4:
+                    user.getAllergies().clear();
+                    CSV.exportUsersToCSV(users, "users.csv");
+                    break;
+                case 5:
+                    return;
+            }
+        }
+    }
+    
+    private static void updateDietaryPreferences(User user, List<User> users) {
+        System.out.println("Current dietary preference: " + user.getDietaryPreferences());
+
+        System.out.print("Would you like to change it? (yes/no): ");
+        if (scanner.nextLine().trim().equalsIgnoreCase("yes")) {
+            String pref;
+            while (true) {
+                System.out.println("Options: 'vegan', 'vegetarian', or 'none'");
+                System.out.print("Enter your new preference: ");
+                pref = scanner.nextLine().trim().toLowerCase();
+                if (pref.equals("vegan") || pref.equals("vegetarian") || pref.equals("none")) {
+                    break;
+                } else {
+                    System.out.println("Invalid input. Please try again.");
+                }
+            }
+
+            user.getDietaryPreferences().clear();
+            user.getDietaryPreferences().add(pref);
+            CSV.exportUsersToCSV(users, "users.csv");
+
+            System.out.println("Dietary preference updated to: " + pref);
+        }
+    }
+
+    private static void updateSubstitutions(User user, List<User> users) {
+        while (true) {
+            System.out.println("\n--- Substitution Settings ---");
+            System.out.println("1. View All Substitutions");
+            System.out.println("2. Add Substitution");
+            System.out.println("3. Remove Substitution");
+            System.out.println("4. Clear All Substitutions");
+            System.out.println("5. Back");
+            System.out.print("Enter your choice: ");
+
+            int choice = scanner.nextInt();
+            scanner.nextLine();
+
+            Map<String, List<String>> subs = user.getSubstitutions();
+
+            switch (choice) {
+                case 1:
+                    subs.forEach((k, v) -> System.out.println("- " + k + " → " + String.join(", ", v)));
+                    break;
+                case 2:
+                    System.out.print("Enter ingredient to substitute: ");
+                    String ing = scanner.nextLine().trim();
+                    System.out.print("Enter substitutes (comma-separated): ");
+                    String[] subsArr = scanner.nextLine().split(",");
+                    subs.put(ing, List.of(subsArr));
+                    user.setSubstitutions(subs);
+                    CSV.exportUsersToCSV(users, "users.csv");
+                    break;
+                case 3:
+                    System.out.print("Enter ingredient to remove from substitutions: ");
+                    subs.remove(scanner.nextLine().trim());
+                    user.setSubstitutions(subs);
+                    CSV.exportUsersToCSV(users, "users.csv");
+                    break;
+                case 4:
+                    subs.clear();
+                    user.setSubstitutions(subs);
+                    CSV.exportUsersToCSV(users, "users.csv");
+                    break;
+                case 5:
+                    return;
+            }
+        }
+    }
+    
+ // This function shows the full recipe.
+ // And now shows a summary at the top of which ingredients match allergens,
+ // and which ones have substitutions saved by the user.
+
+ private static void viewRecipeDetails(Recipe recipe, User user) {
+     System.out.println("\n--- " + recipe.getName() + " ---");
+
+     List<String> ingredients = recipe.getIngredients();
+     Set<String> expandedAllergens = expandAllergens(user.getAllergies());
+     Map<String, List<String>> subs = user.getSubstitutions();
+
+     List<String> matchedAllergens = new ArrayList<>();
+     List<String> matchedSubstitutes = new ArrayList<>();
+
+     for (String ing : ingredients) {
+    	 // Fuzzy matching -> expand categories like "Tree Nuts" to actual ingredients like "walnut"
+         if (fuzzyMatch(ing, expandedAllergens)) {
+             matchedAllergens.add(ing);
+         }
+         for (String subKey : subs.keySet()) {
+             if (fuzzyMatch(ing, List.of(subKey))) {
+                 matchedSubstitutes.add(ing);
+                 break;
+             }
+         }
+     }
+
+     if (!matchedAllergens.isEmpty()) {
+         System.out.println("\n⚠ This recipe contains ingredients you're allergic to:");
+         for (String a : matchedAllergens) System.out.println("- " + a);
+     }
+
+     if (!matchedSubstitutes.isEmpty()) {
+    	    System.out.println("\n These ingredients have saved substitutions:");
+    	    for (String s : matchedSubstitutes) {
+    	        for (String subKey : subs.keySet()) {
+    	            if (fuzzyMatch(s, List.of(subKey))) {
+    	                System.out.println("- " + s + " → " + String.join(", ", subs.get(subKey)));
+    	                break;
+    	            }
+    	        }
+    	    }
+    	}
+
+     System.out.println("\nIngredients:");
+     for (String ing : ingredients) {
+         System.out.print("- " + ing);
+         if (fuzzyMatch(ing, expandedAllergens)) System.out.print(" [⚠ Allergen]");
+         for (String subKey : subs.keySet()) {
+             if (fuzzyMatch(ing, List.of(subKey))) {
+                 System.out.print(" [Substitute: " + String.join(", ", subs.get(subKey)) + "]");
+                 break;
+             }
+         }
+         System.out.println();
+     }
+
+     System.out.println("\nInstructions:");
+     System.out.println(recipe.getInstructions());
+ }
+
+
+
+ // Should return true if any term contains the target
+    private static boolean fuzzyMatch(String target, Collection<String> terms) {
+        String normTarget = target.toLowerCase();
+        for (String term : terms) {
+            String normTerm = term.toLowerCase();
+            if (normTarget.contains(normTerm) || normTerm.contains(normTarget)) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
+ // Returns a list of expanded ingredients for known allergen categories
+    private static Set<String> expandAllergens(List<String> userAllergies) {
+        Map<String, List<String>> allergenMap = new HashMap<>();
+        allergenMap.put("Tree Nuts", List.of("almond", "walnut", "cashew", "pecan", "hazelnut", "pistachio", "macadamia"));
+        allergenMap.put("Shellfish", List.of("shrimp", "lobster", "crab", "scallop", "clam", "oyster"));
+        allergenMap.put("Dairy", List.of("milk", "cheese", "butter", "yogurt", "cream"));
+        allergenMap.put("Eggs", List.of("egg", "egg whites", "egg yolk"));
+        allergenMap.put("Soy", List.of("soybean", "tofu", "soy milk", "edamame"));
+        allergenMap.put("Wheat", List.of("flour", "bread", "pasta", "gluten"));
+
+        Set<String> expanded = new HashSet<>();
+
+        for (String allergy : userAllergies) {
+            expanded.add(allergy.toLowerCase());
+            if (allergenMap.containsKey(allergy)) {
+                expanded.addAll(allergenMap.get(allergy));
+            }
+        }
+
+        return expanded;
+    }
+
+
+    
 
 }
 

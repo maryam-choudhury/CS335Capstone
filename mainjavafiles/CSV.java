@@ -4,38 +4,68 @@ import java.util.*;
 public class CSV {
 
     // Load users from CSV 
-    public static List<User> loadUsersFromCSV(String filename) {
-        List<User> users = new ArrayList<>();
-        try (BufferedReader br = new BufferedReader(new FileReader(filename))) {
-            br.readLine(); // skip header
-            String line;
-            while ((line = br.readLine()) != null) {
-                String[] parts = line.split(",", -1);
-                String userID = parts[0].trim();
-                String name = parts[1].trim();
-                String email = parts[2].trim();
-                List<String> dietaryPreferences = List.of(parts[3].trim().split(";"));
-                boolean notificationsEnabled = Boolean.parseBoolean(parts[4].trim());
-                int matchThreshold = parts.length >= 6 ? Integer.parseInt(parts[5].trim()) : 60;
+	public static List<User> loadUsersFromCSV(String filename) {
+	    List<User> users = new ArrayList<>();
+	    try (BufferedReader br = new BufferedReader(new FileReader(filename))) {
+	        br.readLine(); // skip header
+	        String line;
+	        while ((line = br.readLine()) != null) {
+	            String[] parts = line.split(",", -1);
+	            String userID = parts[0].trim();
+	            String name = parts[1].trim();
+	            String email = parts[2].trim();
+	            List<String> dietaryPreferences = List.of(parts[3].trim().split(";"));
+	            boolean notificationsEnabled = Boolean.parseBoolean(parts[4].trim());
+	            int matchThreshold = parts.length >= 6 ? Integer.parseInt(parts[5].trim()) : 60;
 
+	            // Allergies are in column 7 (index 6), semicolon-separated
+	            List<String> allergies = parts.length >= 7 && !parts[6].isBlank()
+	                ? List.of(parts[6].split(";"))
+	                : new ArrayList<>();
 
-                users.add(new User(userID, name, email, new ArrayList<>(dietaryPreferences), notificationsEnabled, matchThreshold));
-            }
-            System.out.println("Users successfully loaded from " + filename);
-        } catch (IOException e) {
-            System.err.println("Error reading " + filename + ": " + e.getMessage());
-        }
-        return users;
-    }
+	            // Substitutions are in column 8 (index 7), format: ingredient:sub1|sub2;
+	            Map<String, List<String>> substitutions = new HashMap<>();
+	            if (parts.length >= 8 && !parts[7].isBlank()) {
+	                String[] substPairs = parts[7].split(";");
+	                for (String pair : substPairs) {
+	                    String[] kv = pair.split(":");
+	                    if (kv.length == 2) {
+	                        substitutions.put(kv[0].trim(), List.of(kv[1].split("\\|")));
+	                    }
+	                }
+	            }
+
+	            // Build user object
+	            User user = new User(userID, name, email, new ArrayList<>(dietaryPreferences), notificationsEnabled, matchThreshold);
+	            user.setAllergies(new ArrayList<>(allergies));
+	            user.setSubstitutions(substitutions);
+
+	            users.add(user);
+	        }
+	        System.out.println("Users successfully loaded from " + filename);
+	    } catch (IOException e) {
+	        System.err.println("Error reading " + filename + ": " + e.getMessage());
+	    }
+	    return users;
+	}
+
 
     // Save users (including dietary prefs) to CSV
     public static void exportUsersToCSV(List<User> users, String filename) {
         try (PrintWriter writer = new PrintWriter(new FileWriter(filename))) {
-        	writer.println("Username,Name,Email,DietaryPreferences,NotificationsEnabled,MatchThreshold");
+        	writer.println("Username,Name,Email,DietaryPreferences,NotificationsEnabled,MatchThreshold,Allergies,Substitutions");
             for (User user : users) {
+            	String allergyStr = String.join(";", user.getAllergies());
+
+            	StringBuilder substitutionStr = new StringBuilder();
+            	for (Map.Entry<String, List<String>> entry : user.getSubstitutions().entrySet()) {
+            	    substitutionStr.append(entry.getKey()).append(":").append(String.join("|", entry.getValue())).append(";");
+            	}
+
             	writer.println(user.getUserID() + "," + user.getName() + "," + user.getEmail() + "," +
-                        String.join(";", user.getDietaryPreferences()) + "," + user.isNotificationsEnabled()
-                        + "," + user.getMatchThreshold());
+            	               String.join(";", user.getDietaryPreferences()) + "," + user.isNotificationsEnabled() +
+            	               "," + user.getMatchThreshold() + "," + allergyStr + "," + substitutionStr.toString());
+
             }
         } catch (IOException e) {
             System.err.println("Error writing to " + filename + ": " + e.getMessage());
